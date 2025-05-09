@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Management - SIVA CHICKEN FARM</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fdf6ed;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #d35400;
+    }
+    form {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    input[readonly] {
+      background-color: #eee;
+    }
+    button {
+      padding: 10px 16px;
+      background: #e67e22;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .order-section {
+      margin-bottom: 40px;
+    }
+    .order-section h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 6px;
+    }
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .order-table th, .order-table td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    .order-table th {
+      background: #f4a261;
+      color: white;
+    }
+    .actions button {
+      margin: 0 2px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>SIVA CHICKEN FARM - Order Management</h1>
+
+<form id="orderForm">
+  <label>Customer Name</label>
+  <input type="text" id="customerName" required />
+
+  <label>Product</label>
+  <input type="text" id="product" required />
+
+  <label>Quantity (KG)</label>
+  <input type="number" id="quantity" required />
+
+  <label>Price per KG (LKR)</label>
+  <input type="number" id="price" required />
+
+  <label>Total Price (LKR)</label>
+  <input type="text" id="total" readonly />
+
+  <label>Date</label>
+  <input type="date" id="orderDate" required />
+
+  <label>Status</label>
+  <select id="status">
+    <option value="pending">Pending</option>
+    <option value="shipped">Shipped</option>
+    <option value="daily">Daily</option>
+  </select>
+
+  <button type="submit">Add Order</button>
+</form>
+
+<div id="orders">
+  <div class="order-section">
+    <h2>Pending Orders</h2>
+    <table class="order-table" id="pendingOrders">
+      <thead>
+        <tr><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="order-section">
+    <h2>Shipped Orders</h2>
+    <table class="order-table" id="shippedOrders">
+      <thead>
+        <tr><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="order-section">
+    <h2>Daily Orders</h2>
+    <table class="order-table" id="dailyOrders">
+      <thead>
+        <tr><th>Date</th><th>Customer</th><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Google API script -->
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+  let gapiClient;
+
+  function initClient() {
+    gapi.client.init({
+      apiKey: 'AIzaSyA0WeL9sNLIoULU9gVjC0RxndXyWMj6oCs',
+      clientId: '308822320466-v83aj43nt6r41kmq60ls7fhgtqq2mp8s.apps.googleusercontent.com',
+      discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+      scope: "https://www.googleapis.com/auth/spreadsheets"
+    }).then(function () {
+      gapi.auth2.getAuthInstance().signIn().then(function () {
+        gapiClient = gapi.client.sheets.spreadsheets.values;
+      });
+    });
+  }
+
+  function addOrderToGoogleSheet(date, customer, product, qty, price, total, status) {
+    const sheetId = '18hC-ioWk2Evx8Eq_PMoSXPhIROUrgWxXZVvP2IerXJE';
+    const range = 'Sheet1!A:G';
+    const values = [[date, customer, product, qty, price, total, status]];
+
+    const body = { values: values };
+
+    gapiClient.append({
+      spreadsheetId: sheetId,
+      range: range,
+      valueInputOption: "RAW",
+      resource: body
+    }).then((response) => {
+      console.log("Added to Google Sheet", response);
+    });
+  }
+
+  function calculateTotal() {
+    const qty = parseFloat(document.getElementById("quantity").value);
+    const price = parseFloat(document.getElementById("price").value);
+    if (!isNaN(qty) && !isNaN(price)) {
+      document.getElementById("total").value = (qty * price).toFixed(2);
+    } else {
+      document.getElementById("total").value = "";
+    }
+  }
+
+  document.getElementById("quantity").addEventListener("input", calculateTotal);
+  document.getElementById("price").addEventListener("input", calculateTotal);
+
+  document.getElementById("orderDate").valueAsDate = new Date();
+
+  document.getElementById("orderForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const customer = document.getElementById("customerName").value;
+    const product = document.getElementById("product").value;
+    const qty = document.getElementById("quantity").value;
+    const price = document.getElementById("price").value;
+    const total = document.getElementById("total").value;
+    const date = document.getElementById("orderDate").value;
+    const status = document.getElementById("status").value;
+
+    addOrderToSection(date, customer, product, qty, price, total, status);
+    addOrderToGoogleSheet(date, customer, product, qty, price, total, status);
+
+    this.reset();
+    document.getElementById("orderDate").valueAsDate = new Date();
+  });
+
+  function addOrderToSection(date, customer, product, qty, price, total, section) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${date}</td>
+      <td>${customer}</td>
+      <td>${product}</td>
+      <td>${qty}</td>
+      <td>${price}</td>
+      <td>${total}</td>
+      <td class="actions">
+        <button onclick="moveOrder(this, 'pending')">Pending</button>
+        <button onclick="moveOrder(this, 'shipped')">Shipped</button>
+        <button onclick="moveOrder(this, 'daily')">Daily</button>
+        <button onclick="deleteOrder(this)">Delete</button>
+      </td>
+    `;
+    document.querySelector(`#${section}Orders tbody`).appendChild(row);
+  }
+
+  function moveOrder(btn, targetSection) {
+    const row = btn.parentElement.parentElement;
+    const data = [...row.children].map(td => td.textContent);
+    addOrderToSection(data[0], data[1], data[2], data[3], data[4], data[5], targetSection);
+    row.remove();
+  }
+
+  function deleteOrder(btn) {
+    btn.parentElement.parentElement.remove();
+  }
+
+  gapi.load("client:auth2", initClient);
+</script>
+
+</body>
+</html>
